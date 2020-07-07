@@ -61,6 +61,13 @@ func (n newsArticleRepository) RetrieveAnArticle(articleID string) (*NewsArticle
 }
 
 func (n newsArticleRepository) DeleteAnArticle(articleID string) error {
+	sqlStatement := `DELETE FROM news_articles WHERE uuid=$1;`
+	_, err := n.db.Exec(sqlStatement, articleID)
+	if err != nil {
+		log.Printf("Error when deleting a NewsArticle: %s", err)
+		return err
+	}
+	
 	return nil
 }
 
