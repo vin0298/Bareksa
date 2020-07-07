@@ -1,4 +1,4 @@
-SERVER_PORT: 7400
+SERVER_PORT: ":7400"
 DB_HOST: "localhost"
 DB_PORT: 5432
 DB_USER: "vincentsuryabensawan"
