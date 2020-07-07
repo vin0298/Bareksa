@@ -12,5 +12,6 @@ type NewsArticle struct {
 	timePublished  string
 	content        string
 	author         string
-	newsRepository NewsArticleRepository
 }
+
+
