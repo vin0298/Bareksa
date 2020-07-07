@@ -1,6 +1,9 @@
 package entity
 
 type Tag struct {
-	Id   int
-	Name string
+	name string
+}
+
+func NewTag(tagName string) {
+	return Tag{name: tagName}
 }

@@ -1,6 +1,9 @@
 package entity
 
 type Topic struct {
-	Id   string
-	Name string
+	name string
+}
+
+func NewTopic(topicName string) {
+	return Topic{name: topicName}
 }
