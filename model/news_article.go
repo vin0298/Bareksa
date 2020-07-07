@@ -2,12 +2,13 @@ package model
 
 import (
 	entity "./entity"
+	"github.com/google/uuid"
 )
 
 type NewsArticle struct {
 	topic          entity.Topic
-	tag            entity.Tag
-	ID             string
+	ID			   UUID
+	tags            []string
 	title          string
 	timePublished  string
 	content        string
@@ -15,3 +16,15 @@ type NewsArticle struct {
 }
 
 
+func NewNewsArticle(articleData map[string]interface{}) NewsArticle {
+	newTopic := entity.NewTopic(articleData["topic"])
+	return &NewsArticle {
+		topic: newTopic,
+		ID: uuid.New(),
+		tags: articleData["tags"],
+		title: articleData["title"],
+		timePublished: articleData["time"],
+		content: articleData["content"],
+		author: articleData["author"]
+	}
+}
