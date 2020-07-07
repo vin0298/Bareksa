@@ -17,7 +17,7 @@ type NewsArticleData struct {
 type NewsArticle struct {
 	topic          entity.Topic
 	id			   uuid.UUID
-	tags            []string
+	tags           []entity.Tag
 	title          string
 	timePublished  string
 	content        string
@@ -26,11 +26,12 @@ type NewsArticle struct {
 
 func NewNewsArticle(articleData NewsArticleData) *NewsArticle {
 	newTopic := entity.NewTopic(articleData.Topic)
+	tagList := buildTagCollection(articleData.Tags)
 	newId := uuid.New()
 	return &NewsArticle {
 		topic: newTopic,
 		id: newId,
-		tags: articleData.Tags,
+		tags: tagList,
 		title: articleData.Title,
 		timePublished: articleData.TimePublished,
 		content: articleData.Content,
@@ -43,7 +44,7 @@ func (n * NewsArticle) Title() string {
 }
 
 func (n * NewsArticle) TimePublished() string {
-	return n.time
+	return n.timePublished
 }
 
 func (n * NewsArticle) Content() string {
@@ -54,4 +55,22 @@ func (n * NewsArticle) Author() string {
 	return n.author
 }
 
-func (n * NewsArticle) ID
+func (n * NewsArticle) Id() uuid.UUID {
+	return n.id
+}
+
+func (n * NewsArticle) Tags() []entity.Tag {
+	return n.tags
+}
+
+func (n * NewsArticle) GetTopic() string {
+	return n.topic.Name()
+}
+
+func buildTagCollection(tagList []string) []entity.Tag {
+	var tags []entity.Tag
+	for _, tagName := range tagList {
+		tags = append(tags, entity.NewTag(tagName))
+	}
+	return tags
+}
