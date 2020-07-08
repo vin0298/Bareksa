@@ -1,0 +1,6 @@
+SERVER_PORT: ":7400"
+DB_HOST: "localhost"
+DB_PORT: 5432
+DB_USER: "dbuser"
+DB_PW: "dbpw"
+DB_NAME: "content_management"
