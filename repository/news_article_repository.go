@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/viper"
 
 	model "../model"
+	entity "../model/entity"
 )
 
 type NewsArticleRepository interface {
@@ -25,6 +26,8 @@ type NewsArticleRepository interface {
 	CreateAnArticle(article *model.NewsArticle) error
 	UpdateAnArticle(article *model.NewsArticle, articleUUID string) error
 	RetrieveAllArticles() ([]model.ArticleReadModel, error)
+
+	CreateATag(newTag *entity.Tag) (model.TagReadNoPKModel, error)
 }
 
 type newsArticleRepository struct {
@@ -283,6 +286,28 @@ func (n newsArticleRepository) RetrieveAllArticles() ([]model.ArticleReadModel, 
 }
 
 /** Tags Methods **/
+func (n newsArticleRepository) CreateATag(newTag *entity.Tag) (model.TagReadNoPKModel, error) {
+	tagData := model.TagReadNoPKModel{}
+	uuidTag := newTag.Id()
+	sqlStatement := `INSERT INTO tags(tag_name, uuid) VALUES($1, $2)`
+	res, err := n.db.Exec(sqlStatement, newTag.Name(), newTag.Id())
+	if err != nil {
+		log.Printf("Error when attempting to execute query in CreateATag(): %s", err)
+		return tagData, err
+	}
+
+	count, err := res.RowsAffected()
+	if err != nil || count == 0 {
+		if count == 0 {
+			return tagData, errors.New("Duplicate data creation")
+		}
+		return tagData, err
+	}
+
+	tagData.Uuid = uuidTag.String()
+	tagData.Name = newTag.Name()
+	return tagData, nil
+}
 
 /** Helper Methods **/
 

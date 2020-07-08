@@ -128,7 +128,24 @@ func (c *ContentManagerService) ListAllArticles(w http.ResponseWriter, r *http.R
 
 /** Start of Tags Management Service **/
 func (c *ContentManagerService) CreateATag(w http.ResponseWriter, r *http.Request) {
+	reqBody, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Something went wrong when reading the body: %s", err)
+		RespondWithError(w, http.StatusInternalServerError, err.Error())
+	}
 
+	var tagData model.TagData
+	json.Unmarshal(reqBody, &tagData)
+
+	newTag := model.CreateArticleTag(tagData.Name)
+	tagResult, err := c.newsRepository.CreateATag(&newTag)
+
+	if err != nil {
+		log.Printf("Something went wrong when creating the tag: %s", err)
+		RespondWithError(w, http.StatusInternalServerError, err.Error())
+	}
+
+	RespondWithJSON(w, http.StatusOK, tagResult)
 }
 
 func RespondWithError(w http.ResponseWriter, code int, message string) {

@@ -5,6 +5,10 @@ import (
 	"github.com/google/uuid"
 )
 
+type TagData struct {
+	Name string `json:"name"`
+}
+
 type NewsArticleData struct {
 	Topic         string   `json:"topic"`
 	Tags          []string `json:"tags"`
@@ -13,18 +17,6 @@ type NewsArticleData struct {
 	Content       string   `json:"content"`
 	Author        string   `json:"author"`
 	Status        string   `json:"status"`
-}
-
-/* Make this immutable */
-type ArticleReadModel struct {
-	Author         string
-	Title          string
-	Content        string
-	Time_published string
-	Uuid           string
-	Topic          string
-	Status         string
-	Tags           []string
 }
 
 type NewsArticle struct {
@@ -92,4 +84,8 @@ func buildTagCollection(tagList []string) []entity.Tag {
 		tags = append(tags, entity.NewTag(tagName))
 	}
 	return tags
+}
+
+func CreateArticleTag(tagName string) entity.Tag {
+	return entity.NewTag(tagName)
 }
