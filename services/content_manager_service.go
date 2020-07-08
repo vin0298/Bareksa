@@ -8,8 +8,8 @@ import (
 	//"fmt"
 	"encoding/json"
 
-	model "../model"
-	repo "../repository"
+	model "github.com/bareksa/model"
+	repo "github.com/bareksa/repository"
 
 	"github.com/gorilla/mux"
 )

@@ -14,8 +14,8 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/spf13/viper"
 
-	model "../model"
-	entity "../model/entity"
+	model "github.com/bareksa/model"
+	entity "github.com/bareksa/model/entity"
 )
 
 type NewsArticleRepository interface {

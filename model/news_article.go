@@ -1,7 +1,7 @@
 package model
 
 import (
-	entity "./entity"
+	entity "github.com/bareksa/model/entity"
 	"github.com/google/uuid"
 )
 

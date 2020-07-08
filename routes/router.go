@@ -3,7 +3,7 @@ package routes
 import (
 	"log"
 
-	"../services"
+	"github.com/bareksa/services"
 	"github.com/gorilla/mux"
 )
 
