@@ -11,13 +11,13 @@ CREATE TABLE news_articles (
     status VARCHAR(25) NOT NULL
 );
 
-CREATE TABLE tags_tw (
+CREATE TABLE tags (
     tag_id SERIAL PRIMARY KEY,
     tag_name VARCHAR(255) NOT NULL unique,
     uuid UUID NOT NULL
 );
 
-CREATE TABLE news_tags_tw (
+CREATE TABLE news_tags (
     article_id INT NOT NULL REFERENCES news_articles(article_id) ON UPDATE CASCADE ON DELETE CASCADE,
     tag_id INT NOT NULL REFERENCES tags(tag_id) ON UPDATE CASCADE ON DELETE CASCADE
 );
