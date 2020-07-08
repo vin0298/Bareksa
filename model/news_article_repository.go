@@ -22,6 +22,7 @@ type NewsArticleRepository interface {
 	DeleteAnArticle(articleID string) error
 	CreateAnArticle(article *NewsArticle) error
 	UpdateAnArticle(article *NewsArticle, articleUUID string) error
+	RetrieveAllArticles() ([]ArticleReadModel, error)
 }
 
 type newsArticleRepository struct {
@@ -54,11 +55,6 @@ func SetupDatabase() (NewsArticleRepository, error) {
 
 func (n newsArticleRepository) FindNewsByTopic(topic string) ([]ArticleReadModel, error) {
 	/* Retrieve the news_articles */
-	/**
-		SELECT news_articles.*, string_agg(tag_name, ',') as tag_names FROM news_articles
-	JOIN news_tags ON news_tags.article_id=news_articles.article_id
-	JOIN tags ON news_tags.tag_id=tags.tag_id GROUP BY news_articles.article_id;
-	*/
 	sqlStatement := `SELECT news_articles.*, string_agg(tag_name, ',') as tag_names
 						FROM news_articles 
 						JOIN news_tags ON news_tags.article_id=news_articles.article_id
@@ -107,7 +103,7 @@ func (n newsArticleRepository) FindNewsByStatus(status string) ([]ArticleReadMod
 	rows, err := n.db.Query(sqlStatement, status)
 	var listOfArticles []ArticleReadModel
 	if err != nil {
-		log.Printf("Error at FindNewByTopic() on query: %s", err)
+		log.Printf("Error at FindNewByStatus() on query: %s", err)
 		return listOfArticles, err
 	}
 
@@ -247,6 +243,46 @@ func (n newsArticleRepository) UpdateAnArticle(article *NewsArticle, articleUUID
 
 	return nil
 }
+
+func (n newsArticleRepository) RetrieveAllArticles() ([]ArticleReadModel, error) {
+	sqlStatement := `SELECT news_articles.*, string_agg(tag_name, ',') as tag_names
+						FROM news_articles 
+						JOIN news_tags ON news_tags.article_id=news_articles.article_id
+						JOIN tags ON news_tags.tag_id=tags.tag_id
+						GROUP BY news_articles.article_id`
+
+	rows, err := n.db.Query(sqlStatement)
+	var listOfArticles []ArticleReadModel
+	if err != nil {
+		log.Printf("Error at retrieveAllArticles() on query: %s", err)
+		return listOfArticles, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		article := ArticleReadModel{}
+		articlePK := 0
+		var tag_names string
+		err = rows.Scan(&articlePK, &article.Author, &article.Title,
+			&article.Content, &article.Time_published, &article.Uuid,
+			&article.Topic, &article.Status, &tag_names)
+
+		article.Tags = strings.Split(tag_names, `,`)
+		listOfArticles = append(listOfArticles, article)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return listOfArticles, err
+	}
+
+	return listOfArticles, nil
+}
+
+/** Tags Methods **/
+
+/** Helper Methods **/
 
 func (n newsArticleRepository) insertArticleTags(article *NewsArticle) ([]int, error) {
 	sqlStatement := `INSERT INTO tags(tag_name, uuid) VALUES`
