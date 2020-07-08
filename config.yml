@@ -1,6 +1,0 @@
-SERVER_PORT: ":7400"
-DB_HOST: "localhost"
-DB_PORT: 5432
-DB_USER: "vincentsuryabensawan"
-DB_PW: "1450id"
-DB_NAME: "content_management"
