@@ -8,6 +8,6 @@ func NewTopic(topicName string) Topic {
 	return Topic{name: topicName}
 }
 
-func(t Topic) Name() string {
+func (t Topic) Name() string {
 	return t.name
 }

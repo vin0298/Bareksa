@@ -31,18 +31,22 @@ func NewContentManagerService() (*ContentManagerService, error) {
 func (c *ContentManagerService) CreateAnArticle(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		panic(err)
+		RespondWithError(w, http.StatusInternalServerError, err.Error())
 	}
 
 	var articleData model.NewsArticleData
 	json.Unmarshal(reqBody, &articleData)
 
 	article := model.NewNewsArticle(articleData)
-	err = c.newsRepository.CreateAnArticle(article)
+	articleUUID, err := c.newsRepository.CreateAnArticle(article)
 
 	if err != nil {
-		panic(err)
+		RespondWithError(w, http.StatusInternalServerError, err.Error())
 	}
+
+	res := struct{ uuid string }{articleUUID}
+
+	RespondWithJSON(w, http.StatusCreated, res)
 }
 
 func (c *ContentManagerService) UpdateAnArticle(w http.ResponseWriter, r *http.Request) {
@@ -145,7 +149,49 @@ func (c *ContentManagerService) CreateATag(w http.ResponseWriter, r *http.Reques
 		RespondWithError(w, http.StatusInternalServerError, err.Error())
 	}
 
-	RespondWithJSON(w, http.StatusOK, tagResult)
+	RespondWithJSON(w, http.StatusCreated, tagResult)
+}
+
+func (c *ContentManagerService) RenameATag(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	tagUUID := params["uuid"]
+
+	reqBody, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Something went wrong when reading the body: %s", err)
+		RespondWithError(w, http.StatusInternalServerError, err.Error())
+	}
+
+	var tagData model.TagData
+	json.Unmarshal(reqBody, &tagData)
+	err = c.newsRepository.RenameATag(tagUUID, tagData.Name)
+	if err != nil {
+		log.Printf("Error occured when renaming the tag: %s", err)
+		RespondWithError(w, http.StatusInternalServerError, err.Error())
+	}
+
+	RespondWithJSON(w, http.StatusNoContent, nil)
+}
+
+func (c *ContentManagerService) RetrieveATag(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	tagUUID := params["uuid"]
+
+	tagData, err := c.newsRepository.SearchATag(tagUUID)
+	if err != nil {
+		log.Printf("Error when searching for a specific tag: %s", err)
+		RespondWithError(w, http.StatusInternalServerError, err.Error())
+	}
+	RespondWithJSON(w, http.StatusOK, tagData)
+}
+
+func (c *ContentManagerService) ListAllTags(w http.ResponseWriter, r *http.Request) {
+	tags_list, err := c.newsRepository.RetrieveAllTags()
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, err.Error())
+	}
+
+	RespondWithJSON(w, http.StatusOK, tags_list)
 }
 
 func RespondWithError(w http.ResponseWriter, code int, message string) {

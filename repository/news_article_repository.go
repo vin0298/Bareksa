@@ -23,11 +23,14 @@ type NewsArticleRepository interface {
 	FindNewsByStatus(status string) ([]model.ArticleReadModel, error)
 	RetrieveAnArticle(uuid string) (*model.ArticleReadModel, error)
 	DeleteAnArticle(articleID string) error
-	CreateAnArticle(article *model.NewsArticle) error
+	CreateAnArticle(article *model.NewsArticle) (string, error)
 	UpdateAnArticle(article *model.NewsArticle, articleUUID string) error
 	RetrieveAllArticles() ([]model.ArticleReadModel, error)
 
 	CreateATag(newTag *entity.Tag) (model.TagReadNoPKModel, error)
+	RenameATag(tagUUID string, newName string) error
+	SearchATag(tagUUID string) (model.TagReadNoPKModel, error)
+	RetrieveAllTags() ([]model.TagReadNoPKModel, error)
 }
 
 type newsArticleRepository struct {
@@ -147,6 +150,11 @@ func (n newsArticleRepository) RetrieveAnArticle(uuid string) (*model.ArticleRea
 		&newsModel.Topic, &newsModel.Status)
 
 	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("Empty rows")
+			return &model.ArticleReadModel{}, nil
+		}
+		log.Printf("Something when wrong when retrieving an article: %s", err)
 		return &model.ArticleReadModel{}, err
 	}
 
@@ -178,7 +186,7 @@ func (n newsArticleRepository) DeleteAnArticle(articleID string) error {
 	return nil
 }
 
-func (n newsArticleRepository) CreateAnArticle(article *model.NewsArticle) error {
+func (n newsArticleRepository) CreateAnArticle(article *model.NewsArticle) (string, error) {
 	sqlStatement := `INSERT INTO news_articles(author, title, content, time_published, uuid, topic, status)
 					 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING article_id`
 
@@ -190,23 +198,23 @@ func (n newsArticleRepository) CreateAnArticle(article *model.NewsArticle) error
 
 	if err != nil {
 		log.Printf("Error when inserting a new NewsArticle: %s", err)
-		return err
+		return "", err
 	}
 
 	/* Refactor: Insert the tags */
 	tagIdList, err := n.insertArticleTags(article)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	/* End of tags insertion. Note use UUID later */
 	/* Insert the foreign keys to the tables */
 	err = n.updateArticleTagsJoinTable(articleID, tagIdList)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return article.Id().String(), nil
 }
 
 func (n newsArticleRepository) UpdateAnArticle(article *model.NewsArticle, articleUUID string) error {
@@ -289,7 +297,7 @@ func (n newsArticleRepository) RetrieveAllArticles() ([]model.ArticleReadModel, 
 func (n newsArticleRepository) CreateATag(newTag *entity.Tag) (model.TagReadNoPKModel, error) {
 	tagData := model.TagReadNoPKModel{}
 	uuidTag := newTag.Id()
-	sqlStatement := `INSERT INTO tags(tag_name, uuid) VALUES($1, $2)`
+	sqlStatement := `INSERT INTO tags(tag_name, uuid) VALUES($1, $2) ON CONFLICT DO NOTHING`
 	res, err := n.db.Exec(sqlStatement, newTag.Name(), newTag.Id())
 	if err != nil {
 		log.Printf("Error when attempting to execute query in CreateATag(): %s", err)
@@ -307,6 +315,68 @@ func (n newsArticleRepository) CreateATag(newTag *entity.Tag) (model.TagReadNoPK
 	tagData.Uuid = uuidTag.String()
 	tagData.Name = newTag.Name()
 	return tagData, nil
+}
+
+func (n newsArticleRepository) RenameATag(tagUUID string, newName string) error {
+	sqlStatement := `UPDATE tags SET tag_name=$1 WHERE uuid=$2;`
+	res, err := n.db.Exec(sqlStatement, newName, tagUUID)
+	if err != nil {
+		log.Printf("Error when attempting to execute query RenameATag(): %s", err)
+		return err
+	}
+
+	count, err := res.RowsAffected()
+	if err != nil || count == 0 {
+		if count == 0 {
+			return errors.New("Invalid update tag data")
+		}
+		return err
+	}
+	return nil
+}
+
+func (n newsArticleRepository) SearchATag(tagUUID string) (model.TagReadNoPKModel, error) {
+	sqlStatement := `SELECT tag_name FROM tags WHERE uuid=$1;`
+	tagName := ""
+
+	row := n.db.QueryRow(sqlStatement, tagUUID)
+	err := row.Scan(&tagName)
+	if err != nil && err != sql.ErrNoRows {
+		log.Printf("Error when querying tags: %s", err)
+		return model.TagReadNoPKModel{}, err
+	}
+
+	if err == sql.ErrNoRows {
+		return model.TagReadNoPKModel{}, nil
+	}
+
+	return model.TagReadNoPKModel{Name: tagName, Uuid: tagUUID}, nil
+}
+
+func (n newsArticleRepository) RetrieveAllTags() ([]model.TagReadNoPKModel, error) {
+	sqlStatement := `SELECT tag_name, uuid FROM tags;`
+
+	rows, err := n.db.Query(sqlStatement)
+	var tagList []model.TagReadNoPKModel
+
+	if err != nil {
+		log.Printf("Something went wrong when executing the query: %s", err)
+		return tagList, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		tagData := model.TagReadNoPKModel{}
+		err = rows.Scan(&tagData.Name, &tagData.Uuid)
+		if err != nil {
+			log.Printf("Error when parsing through the rows")
+			return tagList, err
+		}
+		tagList = append(tagList, tagData)
+	}
+
+	return tagList, nil
 }
 
 /** Helper Methods **/
@@ -329,13 +399,12 @@ func (n newsArticleRepository) insertArticleTags(article *model.NewsArticle) ([]
 	sqlStatement += `ON CONFLICT DO NOTHING RETURNING tag_id`
 
 	rows, err := n.db.Query(sqlStatement, tagValues...)
+	var tagIdList []int
 	if err != nil {
-		return nil, err
+		return tagIdList, err
 	}
 
 	defer rows.Close()
-
-	var tagIdList []int
 
 	for rows.Next() {
 		var tag_id int
