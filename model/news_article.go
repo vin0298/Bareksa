@@ -9,6 +9,7 @@ type TagData struct {
 	Name string `json:"name"`
 }
 
+// Struct used to help simplify reading the body from API requests
 type NewsArticleData struct {
 	Topic         string   `json:"topic"`
 	Tags          []string `json:"tags"`
@@ -19,6 +20,8 @@ type NewsArticleData struct {
 	Status        string   `json:"status"`
 }
 
+// NewsArticle is the aggregate in this project because Topic and a
+// Tags are a part of a NewsArticle features.
 type NewsArticle struct {
 	topic         entity.Topic
 	id            uuid.UUID
@@ -46,6 +49,7 @@ func NewNewsArticle(articleData NewsArticleData) *NewsArticle {
 	}
 }
 
+// Accessors for the NewsArticle aggregate
 func (n *NewsArticle) Title() string {
 	return n.title
 }

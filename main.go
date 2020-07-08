@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
-	//	"./model"
+	"log"
+
 	"net/http"
 
-	config "./config"
-	"./routes"
+	config "github.com/bareksa/config"
+	"github.com/bareksa/routes"
 	"github.com/spf13/viper"
 )
 
@@ -17,9 +17,6 @@ func main() {
 
 func startServer() {
 	router := routes.SetupRouter()
-	err := http.ListenAndServe(viper.GetString("SERVER_PORT"), router)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println("server is running")
+	log.Printf("Server is running")
+	log.Fatal(http.ListenAndServe(viper.GetString("SERVER_PORT"), router))
 }

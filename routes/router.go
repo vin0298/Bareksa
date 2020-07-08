@@ -3,9 +3,15 @@ package routes
 import (
 	"log"
 
-	"github.com/bareksa/services"
+	services "github.com/bareksa/services"
 	"github.com/gorilla/mux"
 )
+
+// This package contains the routes of the endpoints. My initial
+// goal is to create additional endpoints  excluding the
+// required CRUD endpoints to allow users additional
+// features such as attaching a tag to an article (a feature that would
+// makes sense and exists in a CMS).
 
 func SetupRouter() *mux.Router {
 	router := mux.NewRouter()
@@ -14,8 +20,6 @@ func SetupRouter() *mux.Router {
 	if err != nil {
 		log.Fatalf("Creating the ContentManagerService Failed %s", err)
 	}
-
-	// TODO: ADD ERROR FOR UNHANDLED ROUTES
 
 	router.HandleFunc("/articles", contentManager.CreateAnArticle).Methods("POST")
 	router.HandleFunc("/articles/{uuid}", contentManager.RetrieveAnArticle).Methods("GET")
@@ -32,7 +36,8 @@ func SetupRouter() *mux.Router {
 	router.HandleFunc("/articles/all/tags", contentManager.ListAllTags).Methods("GET")
 
 	/* attach a tag to an article, remove a tag from an article
-	router.HandleFunc("/articles/{article-uuid}/tags/{tag-uuid}",)
+	router.HandleFunc("/articles/{article-uuid}/tags/{tag-uuid}", contentManager.AttachTagToArticle).Methods("POST")
+	router.HandleFunc("/articles/{article-uuid}/tags/{tag-uuid}", contentManager.RemoveTagFromArticle).Methods("DELETE")
 	*/
 
 	return router

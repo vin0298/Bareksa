@@ -19,12 +19,12 @@ var (
 	Basepath   = filepath.Dir(b)
 )
 
-func getRootFolderPath() string {
+func GetRootFolderPath() string {
 	dir, _ := filepath.Split(Basepath)
 	return dir
 }
 
-func getStringFromFile(filename string) (*string, error) {
+func GetStringFromFile(filename string) (*string, error) {
 	content, err := ioutil.ReadFile(filename)
 
 	if err != nil {
@@ -42,14 +42,14 @@ func RunMigration() error {
 		return err
 	}
 
-	basePath := getRootFolderPath()
-	migrationQueryString, err := getStringFromFile(basepath + "migration/schema.sql")
+	basePath := GetRootFolderPath()
+	migrationQueryString, err := GetStringFromFile(basePath + "migration/schema.sql")
 
 	if err != nil {
 		return err
 	}
 
-	_, err := repo.db.Exec(*migrationQueryString)
+	_, err = repo.db.Exec(*migrationQueryString)
 
 	if err != nil {
 		return err
@@ -64,7 +64,8 @@ func RunSeeder() error {
 		return err
 	}
 
-	seederQueryString, err := getStringFromFile(basepath + "migration/seeder.sql")
+	basePath := GetRootFolderPath()
+	seederQueryString, err := GetStringFromFile(basepath + "migration/seeder.sql")
 
 	if err != nil {
 		return err

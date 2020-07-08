@@ -14,6 +14,12 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// This is the domain service. The concept is working as the
+// software of a Content-Management-Software such as Drupal/WordPress.
+// The user will then "order" the CMS through the API. This "CMS"
+// will then try to read the data provided, create the suitable
+// aggregate and pass it to the repository for persistence
+
 type ContentManagerService struct {
 	newsRepository repo.NewsArticleRepository
 }
@@ -194,6 +200,8 @@ func (c *ContentManagerService) ListAllTags(w http.ResponseWriter, r *http.Reque
 	RespondWithJSON(w, http.StatusOK, tags_list)
 }
 
+// The two functions below are helper functions help to write the API
+// response
 func RespondWithError(w http.ResponseWriter, code int, message string) {
 	RespondWithJSON(w, code, map[string]string{"error": message})
 }
