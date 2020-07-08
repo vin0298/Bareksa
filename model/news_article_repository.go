@@ -2,9 +2,10 @@ package model
 
 import (
 	"log"
-
+	"strings"
 	"fmt"
 	"strconv"
+	//"github.com/google/uuid"
 
 	"github.com/spf13/viper"
 	"database/sql"
@@ -12,9 +13,9 @@ import (
 )
 
 type NewsArticleRepository interface {
-	FindNewsByTopic() ([]NewsArticle, error)
-	FindNewsByStatus() ([]NewsArticle, error)
-	RetrieveAnArticle(articleID string) (*NewsArticle, error)
+	FindNewsByTopic() ([]ArticleReadModel, error)
+	FindNewsByStatus() ([]ArticleReadModel, error)
+	RetrieveAnArticle(uuid string) (*ArticleReadModel, error)
 	DeleteAnArticle(articleID string) error
 	CreateAnArticle(*NewsArticle) error
 	UpdateAnArticle(*NewsArticle) error
@@ -48,16 +49,45 @@ func SetupDatabase() (NewsArticleRepository, error) {
 	return newsArticleRepository{db: postgresDB}, nil
 }
 
-func (n newsArticleRepository) FindNewsByTopic() ([]NewsArticle, error) {
+func (n newsArticleRepository) FindNewsByTopic() ([]ArticleReadModel, error) {
 	return nil, nil
 }
 
-func (n newsArticleRepository) FindNewsByStatus() ([]NewsArticle, error) {
+func (n newsArticleRepository) FindNewsByStatus() ([]ArticleReadModel, error) {
 	return nil, nil
 }
 
-func (n newsArticleRepository) RetrieveAnArticle(articleID string) (*NewsArticle, error) {
-	return &NewsArticle{}, nil
+func (n newsArticleRepository) RetrieveAnArticle(uuid string) (*ArticleReadModel, error) {
+	sqlStatement := `SELECT * FROM news_articles WHERE uuid=$1;`
+	row := n.db.QueryRow(sqlStatement, uuid)
+
+	var newsModel = ArticleReadModel{}
+
+	err := row.Scan(&newsModel.Article_id, &newsModel.Author, 
+					&newsModel.Title, &newsModel.Content,
+					&newsModel.Time_published, &newsModel.Uuid,
+					&newsModel.Topic, &newsModel.Status)
+
+	if err != nil {
+		return &ArticleReadModel{}, err
+	}
+	
+	articlePK := newsModel.Article_id
+	/* Retrieve all the tags related to it */
+	sqlStatement = `SELECT string_agg(tag_name, ',') FROM news_tags JOIN tags 
+						ON news_tags.tag_id=tags.tag_id 
+						WHERE news_tags.article_id=$1`
+	
+	var tagListStr string
+	err = n.db.QueryRow(sqlStatement, articlePK).Scan(&tagListStr)
+	
+	if err != nil {
+		return &ArticleReadModel{}, err
+	}
+	newsModel.Tags = strings.Split(tagListStr, `,`)
+	/* Done tag retrieval */
+
+	return &newsModel, nil
 }
 
 func (n newsArticleRepository) DeleteAnArticle(articleID string) error {
@@ -72,14 +102,14 @@ func (n newsArticleRepository) DeleteAnArticle(articleID string) error {
 }
 
 func (n newsArticleRepository) CreateAnArticle(article *NewsArticle) error {
-	sqlStatement := `INSERT INTO news_articles(author, title, content, time_published, uuid, topic)
-					 VALUES ($1, $2, $3, $4, $5, $6) RETURNING article_id`
+	sqlStatement := `INSERT INTO news_articles(author, title, content, time_published, uuid, topic, status)
+					 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING article_id`
 	
 	/* Insert the NewsArticle content */
 	articleId := 0
 	err := n.db.QueryRow(sqlStatement, article.Author(), article.Title(), 
 				article.Content(), article.TimePublished(), article.Id(), 
-				article.GetTopic()).Scan(&articleId)		
+				article.GetTopic(), article.Status()).Scan(&articleId)		
 	
 	if err != nil {
 		log.Printf("Error when inserting a new NewsArticle: %s", err)

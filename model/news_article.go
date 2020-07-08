@@ -12,6 +12,21 @@ type NewsArticleData struct {
 	TimePublished 	string `json:"timePublished`
 	Content 		string `json:"content"`
 	Author  		string `json:"author"`
+	Status			string `json:"status"`
+}
+
+
+/* Make this immutable */
+type ArticleReadModel struct {
+	Article_id int
+	Author 	string
+	Title	string
+	Content	string
+	Time_published string
+	Uuid	string
+	Topic	string
+	Status	string
+	Tags 	[]string
 }
 
 type NewsArticle struct {
@@ -22,6 +37,7 @@ type NewsArticle struct {
 	timePublished  string
 	content        string
 	author         string
+	status		   string
 }
 
 func NewNewsArticle(articleData NewsArticleData) *NewsArticle {
@@ -36,6 +52,7 @@ func NewNewsArticle(articleData NewsArticleData) *NewsArticle {
 		timePublished: articleData.TimePublished,
 		content: articleData.Content,
 		author: articleData.Author,
+		status: articleData.Status,
 	}
 }
 
@@ -61,6 +78,10 @@ func (n * NewsArticle) Id() uuid.UUID {
 
 func (n * NewsArticle) Tags() []entity.Tag {
 	return n.tags
+}
+
+func (n * NewsArticle) Status() string {
+	return n.status
 }
 
 func (n * NewsArticle) GetTopic() string {
