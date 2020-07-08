@@ -62,8 +62,9 @@ func (n newsArticleRepository) RetrieveAnArticle(uuid string) (*ArticleReadModel
 	row := n.db.QueryRow(sqlStatement, uuid)
 
 	var newsModel = ArticleReadModel{}
+	var articlePK int
 
-	err := row.Scan(&newsModel.Article_id, &newsModel.Author, 
+	err := row.Scan(&articlePK, &newsModel.Author, 
 					&newsModel.Title, &newsModel.Content,
 					&newsModel.Time_published, &newsModel.Uuid,
 					&newsModel.Topic, &newsModel.Status)
@@ -72,7 +73,6 @@ func (n newsArticleRepository) RetrieveAnArticle(uuid string) (*ArticleReadModel
 		return &ArticleReadModel{}, err
 	}
 	
-	articlePK := newsModel.Article_id
 	/* Retrieve all the tags related to it */
 	sqlStatement = `SELECT string_agg(tag_name, ',') FROM news_tags JOIN tags 
 						ON news_tags.tag_id=tags.tag_id 

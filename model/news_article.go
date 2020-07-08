@@ -18,7 +18,7 @@ type NewsArticleData struct {
 
 /* Make this immutable */
 type ArticleReadModel struct {
-	Article_id int
+//	Article_id int
 	Author 	string
 	Title	string
 	Content	string
