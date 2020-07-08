@@ -17,7 +17,7 @@ import (
 
 type NewsArticleRepository interface {
 	FindNewsByTopic(topic string) ([]ArticleReadModel, error)
-	FindNewsByStatus() ([]ArticleReadModel, error)
+	FindNewsByStatus(status string) ([]ArticleReadModel, error)
 	RetrieveAnArticle(uuid string) (*ArticleReadModel, error)
 	DeleteAnArticle(articleID string) error
 	CreateAnArticle(article *NewsArticle) error
@@ -95,8 +95,42 @@ func (n newsArticleRepository) FindNewsByTopic(topic string) ([]ArticleReadModel
 	return listOfArticles, nil
 }
 
-func (n newsArticleRepository) FindNewsByStatus() ([]ArticleReadModel, error) {
-	return nil, nil
+/* Can be refactor for DRY */
+func (n newsArticleRepository) FindNewsByStatus(status string) ([]ArticleReadModel, error) {
+	sqlStatement := `SELECT news_articles.*, string_agg(tag_name, ',') as tag_names
+						FROM news_articles 
+						JOIN news_tags ON news_tags.article_id=news_articles.article_id
+						JOIN tags ON news_tags.tag_id=tags.tag_id
+						WHERE news_articles.status=$1
+						GROUP BY news_articles.article_id;`
+
+	rows, err := n.db.Query(sqlStatement, status)
+	var listOfArticles []ArticleReadModel
+	if err != nil {
+		log.Printf("Error at FindNewByTopic() on query: %s", err)
+		return listOfArticles, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		article := ArticleReadModel{}
+		articlePK := 0
+		var tag_names string
+		err = rows.Scan(&articlePK, &article.Author, &article.Title,
+			&article.Content, &article.Time_published, &article.Uuid,
+			&article.Topic, &article.Status, &tag_names)
+
+		article.Tags = strings.Split(tag_names, `,`)
+		listOfArticles = append(listOfArticles, article)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return listOfArticles, err
+	}
+
+	return listOfArticles, nil
 }
 
 func (n newsArticleRepository) RetrieveAnArticle(uuid string) (*ArticleReadModel, error) {
