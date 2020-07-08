@@ -1,4 +1,4 @@
-package model
+package services
 
 import (
 	"io/ioutil"
@@ -8,15 +8,18 @@ import (
 	//"fmt"
 	"encoding/json"
 
+	model "../model"
+	repo "../repository"
+
 	"github.com/gorilla/mux"
 )
 
 type ContentManagerService struct {
-	newsRepository NewsArticleRepository
+	newsRepository repo.NewsArticleRepository
 }
 
 func NewContentManagerService() (*ContentManagerService, error) {
-	newsRepo, err := SetupDatabase()
+	newsRepo, err := repo.SetupDatabase()
 	if err != nil {
 		log.Fatalf("Error when attempting to setup the database")
 	}
@@ -31,10 +34,10 @@ func (c *ContentManagerService) CreateAnArticle(w http.ResponseWriter, r *http.R
 		panic(err)
 	}
 
-	var articleData NewsArticleData
+	var articleData model.NewsArticleData
 	json.Unmarshal(reqBody, &articleData)
 
-	article := NewNewsArticle(articleData)
+	article := model.NewNewsArticle(articleData)
 	err = c.newsRepository.CreateAnArticle(article)
 
 	if err != nil {
@@ -52,10 +55,10 @@ func (c *ContentManagerService) UpdateAnArticle(w http.ResponseWriter, r *http.R
 		panic(err)
 	}
 
-	var articleData NewsArticleData
+	var articleData model.NewsArticleData
 	json.Unmarshal(reqBody, &articleData)
 
-	article := NewNewsArticle(articleData)
+	article := model.NewNewsArticle(articleData)
 	/* Till here */
 
 	err = c.newsRepository.UpdateAnArticle(article, articleUUID)
@@ -99,6 +102,33 @@ func (c *ContentManagerService) SearchArticlesByTopic(w http.ResponseWriter, r *
 	}
 
 	RespondWithJSON(w, http.StatusOK, article_list)
+}
+
+func (c *ContentManagerService) SearchArticlesByStatus(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	status := params["status"]
+	article_list, err := c.newsRepository.FindNewsByStatus(status)
+
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, err.Error())
+	}
+
+	RespondWithJSON(w, http.StatusOK, article_list)
+}
+
+func (c *ContentManagerService) ListAllArticles(w http.ResponseWriter, r *http.Request) {
+	article_list, err := c.newsRepository.RetrieveAllArticles()
+
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, err.Error())
+	}
+
+	RespondWithJSON(w, http.StatusOK, article_list)
+}
+
+/** Start of Tags Management Service **/
+func (c *ContentManagerService) CreateATag(w http.ResponseWriter, r *http.Request) {
+
 }
 
 func RespondWithError(w http.ResponseWriter, code int, message string) {

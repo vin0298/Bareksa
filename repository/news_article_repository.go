@@ -1,4 +1,4 @@
-package model
+package repository
 
 import (
 	"errors"
@@ -13,16 +13,18 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/spf13/viper"
+
+	model "../model"
 )
 
 type NewsArticleRepository interface {
-	FindNewsByTopic(topic string) ([]ArticleReadModel, error)
-	FindNewsByStatus(status string) ([]ArticleReadModel, error)
-	RetrieveAnArticle(uuid string) (*ArticleReadModel, error)
+	FindNewsByTopic(topic string) ([]model.ArticleReadModel, error)
+	FindNewsByStatus(status string) ([]model.ArticleReadModel, error)
+	RetrieveAnArticle(uuid string) (*model.ArticleReadModel, error)
 	DeleteAnArticle(articleID string) error
-	CreateAnArticle(article *NewsArticle) error
-	UpdateAnArticle(article *NewsArticle, articleUUID string) error
-	RetrieveAllArticles() ([]ArticleReadModel, error)
+	CreateAnArticle(article *model.NewsArticle) error
+	UpdateAnArticle(article *model.NewsArticle, articleUUID string) error
+	RetrieveAllArticles() ([]model.ArticleReadModel, error)
 }
 
 type newsArticleRepository struct {
@@ -53,7 +55,7 @@ func SetupDatabase() (NewsArticleRepository, error) {
 	return newsArticleRepository{db: postgresDB}, nil
 }
 
-func (n newsArticleRepository) FindNewsByTopic(topic string) ([]ArticleReadModel, error) {
+func (n newsArticleRepository) FindNewsByTopic(topic string) ([]model.ArticleReadModel, error) {
 	/* Retrieve the news_articles */
 	sqlStatement := `SELECT news_articles.*, string_agg(tag_name, ',') as tag_names
 						FROM news_articles 
@@ -63,7 +65,7 @@ func (n newsArticleRepository) FindNewsByTopic(topic string) ([]ArticleReadModel
 						GROUP BY news_articles.article_id;`
 
 	rows, err := n.db.Query(sqlStatement, topic)
-	var listOfArticles []ArticleReadModel
+	var listOfArticles []model.ArticleReadModel
 	if err != nil {
 		log.Printf("Error at FindNewByTopic() on query: %s", err)
 		return listOfArticles, err
@@ -72,7 +74,7 @@ func (n newsArticleRepository) FindNewsByTopic(topic string) ([]ArticleReadModel
 	defer rows.Close()
 
 	for rows.Next() {
-		article := ArticleReadModel{}
+		article := model.ArticleReadModel{}
 		articlePK := 0
 		var tag_names string
 		err = rows.Scan(&articlePK, &article.Author, &article.Title,
@@ -92,7 +94,7 @@ func (n newsArticleRepository) FindNewsByTopic(topic string) ([]ArticleReadModel
 }
 
 /* Can be refactor for DRY */
-func (n newsArticleRepository) FindNewsByStatus(status string) ([]ArticleReadModel, error) {
+func (n newsArticleRepository) FindNewsByStatus(status string) ([]model.ArticleReadModel, error) {
 	sqlStatement := `SELECT news_articles.*, string_agg(tag_name, ',') as tag_names
 						FROM news_articles 
 						JOIN news_tags ON news_tags.article_id=news_articles.article_id
@@ -101,7 +103,7 @@ func (n newsArticleRepository) FindNewsByStatus(status string) ([]ArticleReadMod
 						GROUP BY news_articles.article_id;`
 
 	rows, err := n.db.Query(sqlStatement, status)
-	var listOfArticles []ArticleReadModel
+	var listOfArticles []model.ArticleReadModel
 	if err != nil {
 		log.Printf("Error at FindNewByStatus() on query: %s", err)
 		return listOfArticles, err
@@ -110,7 +112,7 @@ func (n newsArticleRepository) FindNewsByStatus(status string) ([]ArticleReadMod
 	defer rows.Close()
 
 	for rows.Next() {
-		article := ArticleReadModel{}
+		article := model.ArticleReadModel{}
 		articlePK := 0
 		var tag_names string
 		err = rows.Scan(&articlePK, &article.Author, &article.Title,
@@ -129,11 +131,11 @@ func (n newsArticleRepository) FindNewsByStatus(status string) ([]ArticleReadMod
 	return listOfArticles, nil
 }
 
-func (n newsArticleRepository) RetrieveAnArticle(uuid string) (*ArticleReadModel, error) {
+func (n newsArticleRepository) RetrieveAnArticle(uuid string) (*model.ArticleReadModel, error) {
 	sqlStatement := `SELECT * FROM news_articles WHERE uuid=$1;`
 	row := n.db.QueryRow(sqlStatement, uuid)
 
-	var newsModel = ArticleReadModel{}
+	var newsModel = model.ArticleReadModel{}
 	var articlePK int
 
 	err := row.Scan(&articlePK, &newsModel.Author,
@@ -142,7 +144,7 @@ func (n newsArticleRepository) RetrieveAnArticle(uuid string) (*ArticleReadModel
 		&newsModel.Topic, &newsModel.Status)
 
 	if err != nil {
-		return &ArticleReadModel{}, err
+		return &model.ArticleReadModel{}, err
 	}
 
 	/* Retrieve all the tags related to it */
@@ -154,7 +156,7 @@ func (n newsArticleRepository) RetrieveAnArticle(uuid string) (*ArticleReadModel
 	err = n.db.QueryRow(sqlStatement, articlePK).Scan(&tagListStr)
 
 	if err != nil {
-		return &ArticleReadModel{}, err
+		return &model.ArticleReadModel{}, err
 	}
 	newsModel.Tags = strings.Split(tagListStr, `,`)
 	/* Done tag retrieval */
@@ -173,7 +175,7 @@ func (n newsArticleRepository) DeleteAnArticle(articleID string) error {
 	return nil
 }
 
-func (n newsArticleRepository) CreateAnArticle(article *NewsArticle) error {
+func (n newsArticleRepository) CreateAnArticle(article *model.NewsArticle) error {
 	sqlStatement := `INSERT INTO news_articles(author, title, content, time_published, uuid, topic, status)
 					 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING article_id`
 
@@ -204,7 +206,7 @@ func (n newsArticleRepository) CreateAnArticle(article *NewsArticle) error {
 	return nil
 }
 
-func (n newsArticleRepository) UpdateAnArticle(article *NewsArticle, articleUUID string) error {
+func (n newsArticleRepository) UpdateAnArticle(article *model.NewsArticle, articleUUID string) error {
 	sqlStatement := `UPDATE news_articles SET author=$1, title=$2,
 					content=$3, time_published=$4, topic=$5, status=$6
 					WHERE uuid=$7 RETURNING article_id;`
@@ -244,7 +246,7 @@ func (n newsArticleRepository) UpdateAnArticle(article *NewsArticle, articleUUID
 	return nil
 }
 
-func (n newsArticleRepository) RetrieveAllArticles() ([]ArticleReadModel, error) {
+func (n newsArticleRepository) RetrieveAllArticles() ([]model.ArticleReadModel, error) {
 	sqlStatement := `SELECT news_articles.*, string_agg(tag_name, ',') as tag_names
 						FROM news_articles 
 						JOIN news_tags ON news_tags.article_id=news_articles.article_id
@@ -252,7 +254,7 @@ func (n newsArticleRepository) RetrieveAllArticles() ([]ArticleReadModel, error)
 						GROUP BY news_articles.article_id`
 
 	rows, err := n.db.Query(sqlStatement)
-	var listOfArticles []ArticleReadModel
+	var listOfArticles []model.ArticleReadModel
 	if err != nil {
 		log.Printf("Error at retrieveAllArticles() on query: %s", err)
 		return listOfArticles, err
@@ -261,7 +263,7 @@ func (n newsArticleRepository) RetrieveAllArticles() ([]ArticleReadModel, error)
 	defer rows.Close()
 
 	for rows.Next() {
-		article := ArticleReadModel{}
+		article := model.ArticleReadModel{}
 		articlePK := 0
 		var tag_names string
 		err = rows.Scan(&articlePK, &article.Author, &article.Title,
@@ -284,7 +286,7 @@ func (n newsArticleRepository) RetrieveAllArticles() ([]ArticleReadModel, error)
 
 /** Helper Methods **/
 
-func (n newsArticleRepository) insertArticleTags(article *NewsArticle) ([]int, error) {
+func (n newsArticleRepository) insertArticleTags(article *model.NewsArticle) ([]int, error) {
 	sqlStatement := `INSERT INTO tags(tag_name, uuid) VALUES`
 	tagValues := []interface{}{}
 	for i, tag := range article.Tags() {
@@ -357,13 +359,13 @@ func (n newsArticleRepository) updateArticleTagsJoinTable(articleID int, tagIdLi
 	return nil
 }
 
-func (n newsArticleRepository) findAllTagsOfAnArticle(articleUUID uuid.UUID) ([]TagReadModel, error) {
+func (n newsArticleRepository) findAllTagsOfAnArticle(articleUUID uuid.UUID) ([]model.TagReadModel, error) {
 	sqlStatement := `SELECT tags.uuid, tags.tag_name, tags.tag_id FROM news_articles 
 					JOIN news_tags ON news_articles.article_id=news_tags.article_id 
 					JOIN tags ON tags.tag_id=news_tags.tag_id
 					WHERE news_articles.uuid=$1;`
 
-	var tagList []TagReadModel
+	var tagList []model.TagReadModel
 	rows, err := n.db.Query(sqlStatement, articleUUID)
 	if err != nil {
 		log.Printf("Error at findAllTagsOfAnArticle(): %s", err)
@@ -372,7 +374,7 @@ func (n newsArticleRepository) findAllTagsOfAnArticle(articleUUID uuid.UUID) ([]
 
 	defer rows.Close()
 	for rows.Next() {
-		var tagObj TagReadModel
+		var tagObj model.TagReadModel
 		err = rows.Scan(&tagObj.Uuid, &tagObj.Name, &tagObj.Id)
 		if err != nil {
 			return tagList, err
