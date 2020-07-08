@@ -16,7 +16,7 @@ import (
 )
 
 type NewsArticleRepository interface {
-	FindNewsByTopic() ([]ArticleReadModel, error)
+	FindNewsByTopic(topic string) ([]ArticleReadModel, error)
 	FindNewsByStatus() ([]ArticleReadModel, error)
 	RetrieveAnArticle(uuid string) (*ArticleReadModel, error)
 	DeleteAnArticle(articleID string) error
@@ -52,9 +52,47 @@ func SetupDatabase() (NewsArticleRepository, error) {
 	return newsArticleRepository{db: postgresDB}, nil
 }
 
-func (n newsArticleRepository) FindNewsByTopic() ([]ArticleReadModel, error) {
+func (n newsArticleRepository) FindNewsByTopic(topic string) ([]ArticleReadModel, error) {
+	/* Retrieve the news_articles */
+	/**
+		SELECT news_articles.*, string_agg(tag_name, ',') as tag_names FROM news_articles
+	JOIN news_tags ON news_tags.article_id=news_articles.article_id
+	JOIN tags ON news_tags.tag_id=tags.tag_id GROUP BY news_articles.article_id;
+	*/
+	sqlStatement := `SELECT news_articles.*, string_agg(tag_name, ',') as tag_names
+						FROM news_articles 
+						JOIN news_tags ON news_tags.article_id=news_articles.article_id
+						JOIN tags ON news_tags.tag_id=tags.tag_id
+						WHERE news_articles.topic=$1
+						GROUP BY news_articles.article_id;`
 
-	return nil, nil
+	rows, err := n.db.Query(sqlStatement, topic)
+	var listOfArticles []ArticleReadModel
+	if err != nil {
+		log.Printf("Error at FindNewByTopic() on query: %s", err)
+		return listOfArticles, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		article := ArticleReadModel{}
+		articlePK := 0
+		var tag_names string
+		err = rows.Scan(&articlePK, &article.Author, &article.Title,
+			&article.Content, &article.Time_published, &article.Uuid,
+			&article.Topic, &article.Status, &tag_names)
+
+		article.Tags = strings.Split(tag_names, `,`)
+		listOfArticles = append(listOfArticles, article)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return listOfArticles, err
+	}
+
+	return listOfArticles, nil
 }
 
 func (n newsArticleRepository) FindNewsByStatus() ([]ArticleReadModel, error) {
